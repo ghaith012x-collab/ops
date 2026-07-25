@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Control Panel</title>
+    <style>
+        body { background: #0f0f0f; color: #fff; font-family: Arial; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background: #1a1a1a; padding: 30px; border-radius: 10px; width: 400px; box-shadow: 0 0 20px rgba(0,255,0,0.2); }
+        h1 { color: #00ff00; text-align: center; }
+        input, textarea { width: 100%; padding: 10px; margin: 10px 0; background: #0f0f0f; border: 1px solid #333; color: #fff; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; margin: 5px 0; background: #00ff00; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        button:hover { background: #00cc00; }
+        #webhook-counter { color: #00ff00; font-size: 18px; text-align: center; margin: 10px 0; font-weight: bold; }
+        #status { color: #ff0000; text-align: center; margin-top: 10px; }
+        .log { background: #0f0f0f; padding: 10px; margin-top: 10px; border-radius: 5px; font-size: 12px; max-height: 150px; overflow-y: auto; border: 1px solid #333; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Discord Bot Control</h1>
+        <input type="text" id="serverId" placeholder="Server ID">
+        <textarea id="message" placeholder="Message to spam..." rows="4"></textarea>
+        <button onclick="createChannels()">Channels</button>
+        <div id="webhook-counter">0 webhooks fetched</div>
+        <button onclick="startSpam()">Start</button>
+        <div id="status"></div>
+        <div class="log" id="log"></div>
+    </div>
+    <script>
+        let webhookCount = 0;
+        function log(msg) {
+            const d = document.getElementById('log');
+            d.innerHTML += msg + '<br>';
+            d.scrollTop = d.scrollHeight;
+        }
+        async function createChannels() {
+            const serverId = document.getElementById('serverId').value;
+            if(!serverId) { alert('Enter Server ID'); return; }
+            document.getElementById('status').innerText = 'Creating channels & fetching webhooks...';
+            const res = await fetch('/api/channels', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({server_id: serverId})
+            });
+            const data = await res.json();
+            webhookCount = data.webhook_count || 0;
+            document.getElementById('webhook-counter').innerText = webhookCount + ' webhook' + (webhookCount !== 1 ? 's' : '') + ' fetched';
+            document.getElementById('status').innerText = data.message;
+            log(data.message);
+            data.channels.forEach(c => log('Created: ' + c));
+        }
+        async function startSpam() {
+            const serverId = document.getElementById('serverId').value;
+            const msg = document.getElementById('message').value;
+            if(!serverId || !msg) { alert('Fill all fields'); return; }
+            document.getElementById('status').innerText = 'Spamming initiated...';
+            const res = await fetch('/api/spam', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({server_id: serverId, message: msg})
+            });
+            const data = await res.json();
+            document.getElementById('status').innerText = data.message;
+            log(data.message);
+        }
+    </script>
+</body>
+</html>
